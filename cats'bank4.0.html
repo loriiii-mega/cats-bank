@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐱 Cat's Bank</title>
+
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+      color: white;
+      margin: 20px;
+    }
+
+    .box{
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+    }
+
+    input, select, button{
+      padding: 10px;
+      margin: 5px;
+      border: none;
+      border-radius: 8px;
+    }
+
+    button{
+      background: orange;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover{
+      background: darkorange;
+    }
+
+    h1, h2, h3{
+      color: orange;
+    }
+
+    .qr-box{
+      text-align: center;
+      background: #2a2a2a;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+    }
+
+    .qr-box img{
+      display: block;
+      margin: 0 auto;
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐱 Cat's Bank</h1>
+
+  <div class="box">
+    <h2>Utente</h2>
+
+    <input id="code" placeholder="Codice">
+    <button onclick="login()">Entra</button>
+
+    <div id="userArea" style="display:none;">
+      <p><b>Saldo:</b> <span id="saldo"></span></p>
+
+<h3>👥 Community</h3>
+
+<button onclick="mostraCommunity()">
+Mostra Utenti
+</button>
+
+<pre id="communityBox"></pre>
+
+<h3>🛒 Negozio</h3>
+
+<div id="shopArea"></div>
+
+      <input id="nome" placeholder="Nome">
+
+      <select id="outfit">
+        <option>🧢 Outfit Blu</option>
+
+      </select>
+
+      <button onclick="salvaProfilo()">Salva Profilo</button>
+
+      <br><br>
+
+      <input id="deposito" type="number" placeholder="Crediti da depositare">
+      <button onclick="deposita()">Deposita</button>
+
+      <p id="msg"></p>
+
+<h3>💸 Trasferisci Crediti</h3>
+
+<input
+id="targetCode"
+placeholder="Codice destinatario">
+
+<input
+id="transferAmount"
+type="number"
+placeholder="Crediti">
+
+<button onclick="trasferisci()">
+Invia
+</button>
+
+<h3>📰 Cat's News</h3>
+
+<div id="newsArea"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h2>🔒 Admin</h2>
+
+    <input id="adminPass" type="password" placeholder="Password Admin">
+    <button onclick="adminLogin()">Entra</button>
+
+    <div id="adminArea" style="display:none;">
+      <h3>Crea Codice</h3>
+<h3>👥 Account</h3>
+
+<button onclick="vediAccount()">
+Mostra Account
+</button>
+
+<button onclick="totaleAccount()">
+Totale Account
+</button>
+
+<pre id="accountBox"></pre>
+
+<input
+id="shopEmoji"
+placeholder="Emoji">
+
+<h3>🛒 Aggiungi Oggetto</h3>
+
+<input
+id="shopName"
+placeholder="Nome oggetto">
+
+<select id="shopCategory">
+    <option>👕 Outfit</option>
+    <option>💳 Carta</option>
+    <option>🎁 Merch</option>
+</select>
+
+<input
+id="shopPrice"
+type="number"
+placeholder="Prezzo">
+
+<button onclick="aggiungiOggetto()">
+Aggiungi
+</button>
+      <input id="newCode" placeholder="Nuovo Codice">
+      <input id="newCredits" type="number" placeholder="Crediti">
+
+      <button onclick="creaCodice()">Crea Codice</button>
+
+      <h3>Ricarica Codice</h3>
+
+      <input id="ricCode" placeholder="Codice">
+      <input id="ricAmount" type="number" placeholder="Crediti">
+
+      <button onclick="ricarica()">Ricarica</button>
+
+<h3>❌ Elimina Codice</h3>
+
+<input id="deleteCode"
+placeholder="Codice">
+
+<button onclick="eliminaCodice()">
+Elimina
+</button>
+
+<h3>📰 Scrivi Notizia</h3>
+
+<textarea
+id="newsText"
+rows="5"
+cols="40">
+</textarea>
+
+<br>
+
+<button onclick="salvaNews()">
+Pubblica
+</button>
+
+<h3>📜 Cronologia</h3>
+
+<pre id="historyBox"></pre>
+
+      <h3>Codici Esistenti</h3>
+
+      <pre id="lista"></pre>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+
+import {
+ getFirestore,
+ collection,
+ addDoc,
+ getDocs,
+ deleteDoc,
+ doc
+}
+from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDXRsMMcaw55QzzPX7Un-eCaUPJYsbq9LU",
+  authDomain: "catsbank-22613.firebaseapp.com",
+  projectId: "catsbank-22613",
+  storageBucket: "catsbank-22613.firebasestorage.app",
+  messagingSenderId: "343510573070",
+  appId: "1:343510573070:web:48a89b2b366c6ff41f9c5f",
+  measurementId: "G-2PSJD6C8JQ"
+};
+
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let shop = [];
+
+async function salvaNewsFirebase(testo){
+
+ await addDoc(
+  collection(db,"news"),
+  {
+   testo: testo
+  }
+ );
+
+}
+
+async function caricaNews(){
+
+ try{
+
+  const snapshot =
+  await getDocs(
+   collection(db,"news")
+  );
+
+  let html = "";
+
+  snapshot.forEach(doc=>{
+
+   let dati = doc.data();
+
+   html +=
+   "<p>" +
+   dati.testo +
+   "</p>";
+
+  });
+
+  let area =
+  document.getElementById(
+   "newsArea"
+  );
+
+  if(area){
+   area.innerHTML = html;
+  }
+
+ }catch(err){
+
+  console.error(err);
+
+ }
+
+}
+
+async function caricaShop(){
+
+ try{
+
+  const snapshot =
+  await getDocs(
+   collection(db,"shop")
+  );
+
+  shop = [];
+
+  snapshot.forEach(doc=>{
+
+shop.push({
+ id: doc.id,
+ ...doc.data()
+});
+
+  });
+
+window.shop = shop;
+
+  aggiornaNegozio();
+
+}catch(err){
+ alert(
+  "ERRORE SHOP: " +
+  err.message
+ );
+
+  console.error(err);
+
+ }
+
+}
+async function eliminaOggettoFirebase(id){
+
+ await deleteDoc(
+  doc(db,"shop",id)
+ );
+
+}
+
+async function salvaShop(item){
+
+ try{
+
+  await addDoc(
+   collection(db,"shop"),
+   item
+  );
+
+ }catch(err){
+
+  alert(
+   "ERRORE: " +
+   err.message
+  );
+
+ }
+
+}
+
+window.aggiungiOggetto = async function(){
+
+ let emoji =
+ document.getElementById("shopEmoji").value;
+
+ let nome =
+ document.getElementById("shopName").value;
+
+ let categoria =
+ document.getElementById("shopCategory").value;
+
+ let prezzo =
+ parseInt(
+  document.getElementById("shopPrice").value
+ );
+
+ if(!nome || isNaN(prezzo)){
+
+  alert("Dati non validi!");
+  return;
+
+ }
+
+ let nuovoOggetto = {
+
+  emoji: emoji,
+  nome: nome,
+  categoria: categoria,
+  prezzo: prezzo
+
+ };
+
+ await salvaShop(nuovoOggetto);
+
+ await caricaShop();
+
+ alert("Oggetto aggiunto!");
+
+alert(
+ "Oggetti trovati: " +
+ shop.length
+);
+
+}
+
+function aggiornaNegozio(){
+
+ let html = "";
+
+ shop.forEach((item,index)=>{
+
+  html += `
+  <p>
+  ${item.emoji || "📦"}
+  ${item.nome}
+  -
+  ${item.prezzo} crediti
+  <button onclick="compra(${index})">
+  Compra
+  </button>
+<button onclick=
+"eliminaOggetto(${index})">
+❌
+</button>
+  </p>
+  `;
+
+ });
+
+ let area =
+ document.getElementById(
+  "shopArea"
+ );
+
+ if(area){
+
+  area.innerHTML = html;
+
+ }
+
+}
+window.eliminaOggetto =
+async function(index){
+
+ let item = shop[index];
+
+ await eliminaOggettoFirebase(
+  item.id
+ );
+
+ await caricaShop();
+
+ alert(
+  "Oggetto eliminato!"
+ );
+
+}
+
+window.caricaNews = caricaNews;
+window.salvaNewsFirebase = salvaNewsFirebase;
+window.caricaShop = caricaShop;
+window.caricaNews = caricaNews;
+window.salvaNewsFirebase = salvaNewsFirebase;
+window.firebaseReady = true;
+
+</script>
+
+<script>
+
+window.compra = function(index){
+
+let item = window.shop[index];
+
+ if(codes[currentCode] < item.prezzo){
+
+  alert("Crediti insufficienti!");
+  return;
+
+ }
+
+ codes[currentCode] -= item.prezzo;
+
+history.push(
+
+ currentCode +
+ " ha comprato " +
+ item.nome +
+ " per " +
+ item.prezzo +
+ " crediti"
+
+);
+
+salvaCronologia();
+
+aggiornaCronologia();
+
+salvaDati();
+
+alert(
+ "Hai comprato: " +
+ item.nome
+);
+
+alert(item.categoria);
+if(item.categoria === "👕 Outfit"){
+
+    if(
+        !users[currentCode].ownedOutfits
+    ){
+
+        users[currentCode].ownedOutfits = [];
+
+    }
+
+let nuovoOutfit =
+ item.emoji +
+ " " +
+ item.nome;
+
+if(
+ !users[currentCode]
+ .ownedOutfits
+ .includes(nuovoOutfit)
+){
+
+ users[currentCode]
+ .ownedOutfits
+ .push(nuovoOutfit);
+
+let option =
+document.createElement("option");
+
+option.textContent =
+nuovoOutfit;
+
+option.value =
+nuovoOutfit;
+
+document
+.getElementById("outfit")
+.appendChild(option);
+
+document
+.getElementById("outfit")
+.value =
+nuovoOutfit;
+
+users[currentCode].outfit =
+nuovoOutfit;
+
+}
+
+salvaDati();
+
+alert(
+ "Hai comprato: " +
+ item.nome
+);
+}
+
+}
+
+    let codes = JSON.parse(localStorage.getItem("codes")) || {
+      "CAT100": 1000,
+      "07rainbow07": 5000,
+      "diegocat12": 0
+    };
+
+    let users = JSON.parse(localStorage.getItem("users")) || {};
+    let currentCode = "";
+    const ADMIN_PASSWORD = "MEGAWARCAT17";
+
+    function salvaDati(){
+      localStorage.setItem("codes", JSON.stringify(codes));
+      localStorage.setItem("users", JSON.stringify(users));
+    }
+
+    function aggiornaLista(){
+      let testo = "";
+
+      for(let c in codes){
+        testo += c + " = " + codes[c] + " crediti\n";
+      }
+
+      document.getElementById("lista").textContent = testo;
+    }
+
+function totaleAccount(){
+
+ let totale = 0;
+
+ for(let c in codes){
+  totale++;
+ }
+
+ alert(
+  "Account totali: " + totale
+ );
+
+}
+
+function mostraCommunity(){
+
+ let testo = "";
+
+ for(let c in users){
+
+  let nome =
+   users[c].nome ||
+   "Senza nome";
+
+  let outfit =
+   users[c].outfit ||
+   "Nessuno";
+
+  testo +=
+   nome +
+   "\n" +
+   outfit +
+   "\n\n";
+
+ }
+
+ document.getElementById(
+  "communityBox"
+ ).textContent = testo;
+
+}
+
+function vediAccount(){
+
+ let testo = "";
+
+ for(let c in codes){
+
+  let nome = "Nessun profilo";
+
+  if(users[c]){
+    nome = users[c].nome || "Senza nome";
+  }
+
+let outfit = "Nessuno";
+
+if(users[c]){
+ outfit =
+ users[c].outfit ||
+ "Nessuno";
+}
+
+testo +=
+ "Codice: " + c +
+ "\nNome: " + nome +
+ "\nCrediti: " + codes[c] +
+ "\nOutfit: " + outfit +
+ "\n\n";
+ }
+
+ document.getElementById(
+  "accountBox"
+ ).textContent = testo;
+
+}
+
+    async function login(){
+      let code = document.getElementById("code").value.trim();
+
+      if(codes[code] === undefined){
+        alert("Codice non valido!");
+        return;
+      }
+
+      currentCode = code;
+
+     if(!users[code]){
+
+    users[code] = {
+
+        nome:"",
+        outfit:"🧢 Outfit Blu",
+
+        ownedOutfits:[
+            "🧢 Outfit Blu"
+        ]
+
+    };
+
+}
+
+      document.getElementById("userArea").style.display = "block";
+
+await caricaShop();
+      document.getElementById("saldo").textContent = codes[code];
+
+document.getElementById("nome").value =
+users[code].nome;
+
+let select =
+document.getElementById("outfit");
+
+select.innerHTML = "";
+
+users[code].ownedOutfits.forEach(o=>{
+
+ let option =
+ document.createElement("option");
+
+ option.textContent = o;
+ option.value = o;
+
+ select.appendChild(option);
+
+});
+
+select.value =
+users[code].outfit;;
+    }
+
+    function salvaProfilo(){
+      users[currentCode].nome = document.getElementById("nome").value;
+      users[currentCode].outfit = document.getElementById("outfit").value;
+      salvaDati();
+      alert("Profilo salvato!");
+    }
+
+    function deposita(){
+      let valore = parseInt(document.getElementById("deposito").value);
+
+      if(isNaN(valore) || valore <= 0){
+        alert("Valore non valido!");
+        return;
+      }
+
+      if(valore > codes[currentCode]){
+        alert("Crediti insufficienti!");
+        return;
+      }
+
+      codes[currentCode] -= valore;
+      salvaDati();
+
+      document.getElementById("saldo").textContent = codes[currentCode];
+
+history.push(
+
+ currentCode +
+ " ha depositato " +
+ valore +
+ " crediti"
+
+);
+
+salvaCronologia();
+
+aggiornaCronologia();
+
+      document.getElementById("msg").innerHTML =
+        "✅ " + users[currentCode].nome +
+        " ha depositato " + valore +
+        " crediti nella Cat's Bank.";
+    }
+
+    function adminLogin(){
+      let pass = document.getElementById("adminPass").value;
+
+      if(pass === ADMIN_PASSWORD){
+        document.getElementById("adminArea").style.display = "block";
+        aggiornaLista();
+        alert("Accesso admin riuscito!");
+      } else {
+        alert("Password errata!");
+      }
+    }
+
+    function creaCodice(){
+      let codice = document.getElementById("newCode").value.trim();
+      let crediti = parseInt(document.getElementById("newCredits").value);
+
+      if(!codice || isNaN(crediti)){
+        alert("Inserisci dati validi!");
+        return;
+      }
+
+      codes[codice] = crediti;
+      salvaDati();
+      aggiornaLista();
+      alert("Codice creato!");
+    }
+
+    function ricarica(){
+      let codice = document.getElementById("ricCode").value.trim();
+      let crediti = parseInt(document.getElementById("ricAmount").value);
+
+      if(codes[codice] === undefined){
+        alert("Codice inesistente!");
+        return;
+      }
+
+      if(isNaN(crediti)){
+        alert("Crediti non validi!");
+        return;
+      }
+
+      codes[codice] += crediti;
+      salvaDati();
+      aggiornaLista();
+      alert("Codice ricaricato!");
+    }
+/***************
+CRONOLOGIA
+****************/
+
+let history =
+JSON.parse(localStorage.getItem("history")) || [];
+
+function salvaCronologia(){
+
+ localStorage.setItem(
+   "history",
+   JSON.stringify(history)
+ );
+
+}
+
+function aggiornaCronologia(){
+
+ let box =
+ document.getElementById("historyBox");
+
+ if(!box) return;
+
+ box.textContent =
+ history.join("\n");
+
+}
+
+/***************
+TRASFERIMENTO
+****************/
+
+function trasferisci(){
+
+ let target =
+ document.getElementById("targetCode")
+ .value.trim();
+
+ let amount =
+ parseInt(
+ document.getElementById("transferAmount")
+ .value
+ );
+
+ if(codes[target] === undefined){
+
+  alert("Codice non trovato!");
+  return;
+
+ }
+
+ if(isNaN(amount) || amount <= 0){
+
+  alert("Valore non valido!");
+  return;
+
+ }
+
+ if(amount > codes[currentCode]){
+
+  alert("Crediti insufficienti!");
+  return;
+
+ }
+
+ codes[currentCode] -= amount;
+ codes[target] += amount;
+
+ history.push(
+ currentCode +
+ " ha inviato " +
+ amount +
+ " crediti a " +
+ target
+ );
+
+ salvaDati();
+ salvaCronologia();
+
+ document.getElementById("saldo")
+ .textContent = codes[currentCode];
+
+ aggiornaCronologia();
+
+ alert("Trasferimento riuscito!");
+
+}
+
+/***************
+ELIMINA CODICE
+****************/
+
+function eliminaCodice(){
+
+ let codice =
+ document.getElementById("deleteCode")
+ .value.trim();
+
+ if(codes[codice] === undefined){
+
+  alert("Codice inesistente!");
+  return;
+
+ }
+
+ delete codes[codice];
+
+ salvaDati();
+
+ aggiornaLista();
+
+ alert("Codice eliminato!");
+
+}
+
+/***************
+NEWS
+****************/
+
+
+async function salvaNews(){
+
+ let testo =
+ document.getElementById("newsText")
+ .value;
+
+ await salvaNewsFirebase(
+  testo
+ );
+
+ await caricaNews();
+
+ alert("Notizia pubblicata!");
+
+}
+caricaShop();
+aggiornaLista();
+aggiornaCronologia();
+caricaNews();
+  </script>
+
+</body>
+</html>
